@@ -1,38 +1,29 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-import requests
+from flask import Flask, request, jsonify
+from flask_cors import CORS  
 
-app = FastAPI()
+app = Flask(__name__)
+CORS(app)
 
-# Configurar CORS para permitir peticiones desde cualquier origen
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Variable global para almacenar el estado del LED
+estado_led = {"estado": "apagado"}
 
-# URL del script Python que correrá en tu laptop como puente con el Arduino
-LAPTOP_SERVER_URL = "http://127.0.0.1:5000"
-
-@app.get("/")
-def home():
-    return {"mensaje": "API en la nube lista para controlar el Arduino"}
-
-@app.get("/encender")
+@app.route('/encender', methods=['GET'])
 def encender_led():
-    try:
-        response = requests.get(f"{LAPTOP_SERVER_URL}/encender")
-        return response.json()
-    except Exception as e:
-        return {"error": f"No se pudo conectar con la laptop: {str(e)}"}
+    estado_led["estado"] = "encendido"
+    return jsonify(estado_led)
 
-@app.get("/apagar")
+@app.route('/apagar', methods=['GET'])
 def apagar_led():
-    try:
-        response = requests.get(f"{LAPTOP_SERVER_URL}/apagar")
-        return response.json()
-    except Exception as e:
-        return {"error": f"No se pudo conectar con la laptop: {str(e)}"}
+    estado_led["estado"] = "apagado"
+    return jsonify(estado_led)
+
+@app.route('/estado', methods=['GET'])
+def obtener_estado():
+    return jsonify(estado_led)
+
+@app.route('/')
+def inicio():
+    return "API en Vercel - Control de Arduino"
+
+if __name__ == '__main__':
+    app.run(debug=False)
