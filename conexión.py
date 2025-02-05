@@ -1,39 +1,38 @@
-import serial
-import time
-from flask import Flask, request, jsonify
-from flask_cors import CORS  
+from fastapi import FastAPI
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+import requests
 
+app = FastAPI()
 
-app = Flask(__name__)
-CORS(app)  
+# Configurar CORS para permitir peticiones desde cualquier origen
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-try:
-    arduino = serial.Serial(port='COM7', baudrate=9600, timeout=1)
-    time.sleep(2)  # Espera para que el puerto esté listo
-    print("Conectado a Arduino en COM7")
-except serial.SerialException as e:
-    print(f"Error al conectar con Arduino: {e}")
-    arduino = None  # Evita que el programa se caiga
+# URL del script Python que correrá en tu laptop como puente con el Arduino
+LAPTOP_SERVER_URL = "http://127.0.0.1:5000"
 
-@app.route('/encender', methods=['GET'])
+@app.get("/")
+def home():
+    return {"mensaje": "API en la nube lista para controlar el Arduino"}
+
+@app.get("/encender")
 def encender_led():
-    if arduino:
-        arduino.write(b'ON\n')
-        return jsonify({"estado": "LED encendido"})
-    else:
-        return jsonify({"error": "No hay conexión con Arduino"}), 500
+    try:
+        response = requests.get(f"{LAPTOP_SERVER_URL}/encender")
+        return response.json()
+    except Exception as e:
+        return {"error": f"No se pudo conectar con la laptop: {str(e)}"}
 
-@app.route('/apagar', methods=['GET'])
+@app.get("/apagar")
 def apagar_led():
-    if arduino:
-        arduino.write(b'OFF\n')
-        return jsonify({"estado": "LED apagado"})
-    else:
-        return jsonify({"error": "No hay conexión con Arduino"}), 500
-
-@app.route('/')
-def inicio():
-    return "API para controlar el LED en el pin 13 del Arduino"
-
-if __name__ == '__main__':
-    app.run(debug=False)  # Cambia debug=True a debug=False
+    try:
+        response = requests.get(f"{LAPTOP_SERVER_URL}/apagar")
+        return response.json()
+    except Exception as e:
+        return {"error": f"No se pudo conectar con la laptop: {str(e)}"}
